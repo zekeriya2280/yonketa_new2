@@ -446,14 +446,14 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                 else{
                                 print('d');
                                 setState(() {
-                                  thenumberchangingerror = 'Enter a 4 digit number';
+                                  thenumberchangingerror = 'Enter a 4 digit numbers';
                                 });
                               }
                               }
                               else{
                                 print('c');
                                 setState(() {
-                                  thenumberchangingerror = 'Enter a 4 digit number';
+                                  thenumberchangingerror = 'Enter a 4 digit numbers';
                                 });
                               }
                     
