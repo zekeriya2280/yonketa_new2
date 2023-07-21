@@ -213,10 +213,10 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                    child: Column(
                                      children: [
                                        Center(child: Text(guessednumber,style: GoogleFonts.pacifico(fontSize: 40,fontWeight: FontWeight.bold))),
-                                       SizedBox(height: height*0.13,child: Text(''),),
+                                       SizedBox(height: height*0.13,child: const Text(''),),
                                        Center(child: Text(wonPlayerName,style: GoogleFonts.pacifico(fontSize: 40,fontWeight: FontWeight.bold))),
                                        Center(child: Text('WINNER',style: GoogleFonts.pacifico(fontSize: 40,fontWeight: FontWeight.bold))),
-                                       SizedBox(height: 10,child: Text(''),),
+                                       const SizedBox(height: 10,child: Text(''),),
                                      ],
                                    ),
                          ),
@@ -242,7 +242,7 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                        await rooms.doc(widget.gameid).delete();
                        await Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) =>MenuPage(name: widget.name) ));}
                    ),
-                   SizedBox(height: 2,child: Text(''),)
+                   const SizedBox(height: 2,child: Text(''),)
                  ],
                ),
              ),
@@ -439,7 +439,7 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                   }
                                   else{
                                     setState(() {
-                                  thenumberchangingerror = 'Enter a 4 different digit number';
+                                  thenumberchangingerror = 'Enter a 4 different digit numbers';
                                 });
                                   }
                                 }
