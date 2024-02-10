@@ -1,40 +1,42 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yonketa_new/pages/CreateGamePage.dart';
 import 'package:yonketa_new/pages/JoinGamePage.dart';
+import 'package:yonketa_new/pages/wrapper.dart';
 
 class MenuPage extends StatefulWidget {
-  final String name;
-  const MenuPage({Key? key, required this.name}) : super(key: key);
-
-  
-
+  const MenuPage({Key? key}) : super(key: key);
   @override
   State<MenuPage> createState() => _MenuPageState();
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
 class _MenuPageState extends State<MenuPage> {
+  final CollectionReference<Map<String, dynamic>> players  = FirebaseFirestore.instance.collection('EnteredPlayers');
   final CollectionReference<Map<String, dynamic>> rooms  = FirebaseFirestore.instance.collection('Rooms');
   String playerName = '';
 
   @override
   void initState(){
-    playerName = widget.name;
+     addtoFB();
      roomcleaner();
     super.initState();
   }
   roomcleaner()async{
     final QuerySnapshot<Map<String, dynamic>> docs = await rooms.get();
       for (var doc in docs.docs) {
-        if(doc.data()['player1'] == widget.name || doc.data()['player2'] == widget.name){
+        if(doc.data()['player1'] == playerName || doc.data()['player2'] == playerName){
             await rooms.doc(doc.id).delete();
           }
       }    
+  }
+  addtoFB()async{
+    setState(() {
+      playerName = FirebaseAuth.instance.currentUser!.displayName ?? 'Player${Random().nextInt(10000)}';
+    });
   }
   @override
   Widget build(BuildContext context) {
@@ -52,11 +54,21 @@ class _MenuPageState extends State<MenuPage> {
             backgroundColor: const Color.fromARGB(134, 255, 191, 0),
             title: Row(
               children: [
-                const Expanded(flex: 2,child: Text(''),),
-                Text('YONKETA',style: GoogleFonts.pacifico(),),
                 const Expanded(flex: 3,child: Text(''),),
+                Text('YONKETA',style: GoogleFonts.pacifico(),),
+                const Expanded(flex: 2,child: Text(''),),
               ],
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.exit_to_app),
+                onPressed: ()async{
+                  await FirebaseAuth.instance.signOut().then((value) => 
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Wrapper()), )
+                  );
+                }
+              )
+            ],
           ),
           body: Center(child: 
            Container(
@@ -83,20 +95,18 @@ class _MenuPageState extends State<MenuPage> {
                   )
                  ),
                 onPressed: ()async{
-                  SharedPreferences prefs = await SharedPreferences.getInstance();
                   String roomid = '';
-                  print('aaaaaaaa');
+                  //print('aaaaaaaa');
                   await rooms.add({'player1' : playerName, 'player2' : ''}).then((doc) { 
                     setState(() {
                       roomid = doc.id;
                     });
-                    print('roomid : $roomid');
+                    //print('roomid : $roomid');
                     });
                   for (var doc in snapshot.data!.docs) { 
                     doc.data().isEmpty ? await rooms.doc(doc.id).delete():null; 
                   }
-                  await prefs.setString('roomid', roomid);
-                  await Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) => CreateGamePage(name : playerName ,gameid: roomid,)), );
+                  await Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) => CreateGamePage()), );
                  },
                 child:Padding(
                   padding: const EdgeInsets.all(15.0),

@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:yonketa_new/pages/menupage.dart';
 
 class Game extends StatefulWidget {
-  final String gameid;
   final String me;
-  final String name;
-  const Game({ Key? key, required this.gameid,required this.me,required this.name}) : super(key: key);
+  const Game({ Key? key, required this.me}) : super(key: key);
 
   @override
   State<Game> createState() => _GameState();
@@ -18,6 +17,8 @@ class _GameState extends State<Game> {
   CollectionReference<Map<String, dynamic>> rooms  = FirebaseFirestore.instance.collection('Rooms');
   late Timer _timer;
   int _start = 10;
+  String name = '';
+  String gameid = '';
   dynamic thenumber = '';
   String thenumbererror = '';
   String thepopupnumbererror = '';
@@ -38,6 +39,8 @@ class _GameState extends State<Game> {
 
 @override
   void initState() {
+    name = FirebaseAuth.instance.currentUser!.displayName!;
+    roomidfinder();
     startTimer();
     wonplayerckeckerFN();
     super.initState();
@@ -66,8 +69,18 @@ void startTimer() {
     },
   );
 }
+roomidfinder()async{
+    final QuerySnapshot<Map<String, dynamic>> docs = await rooms.get();
+      for (var doc in docs.docs) {
+        if(doc.data()['player1'] == name || doc.data()['player2'] == name){
+            setState(() {
+              gameid = doc.id;
+            });
+          }
+      }  
+}
 void wonplayerckeckerFN()async{
-  await rooms.doc(widget.gameid).update({'whowon':''});
+  await rooms.doc(gameid).update({'whowon':''});
 }
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
@@ -135,9 +148,9 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                               numberEntered = true;
                                             });
                                             widget.me == 'player1' ? 
-                                                rooms.doc(widget.gameid).update({'player1number' : int.parse(number)}) : 
-                                                rooms.doc(widget.gameid).update({'player2number' : int.parse(number)});
-                                            rooms.doc(widget.gameid).update({
+                                                rooms.doc(gameid).update({'player1number' : int.parse(number)}) : 
+                                                rooms.doc(gameid).update({'player2number' : int.parse(number)});
+                                            rooms.doc(gameid).update({
                                                        'player1guessnumbers' : List<String>.generate(20,(counter) => ''),
                                                        'player2guessnumbers' : List<String>.generate(20,(counter) => ''),});
                                             Navigator.of(context).pop();
@@ -239,8 +252,8 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                         child: Container(width: 200,margin: const EdgeInsets.all(30),child: Center(child: Text('BACK TO MENU',style: GoogleFonts.pacifico(fontSize: 20,color: Colors.white,fontWeight: FontWeight.bold),))),
        
                      onPressed: ()async {
-                       await rooms.doc(widget.gameid).delete();
-                       await Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) =>MenuPage(name: widget.name) ));}
+                       await rooms.doc(gameid).delete();
+                       await Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) =>const MenuPage() ));}
                    ),
                    const SizedBox(height: 2,child: Text(''),)
                  ],
@@ -257,38 +270,34 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
     int plusses = 0;
     int minuses = 0;
     for (var doc in snapshot.data!.docs) {
-      if(doc.id == widget.gameid){
+      if(doc.id == gameid){
         if(doc.data()['player1guessnumbers'] != null){
              List<String> ls = List<String>.from(doc.data()['player1guessnumbers']);
              String opponentnumber = doc.data()['player2number'].toString();
-             if(ls != null){
-                for (var i = 0; i < ls.length; i++) {
-                  if(ls[i] != ''){
-                      if(ls[i].split('')[0] == opponentnumber.split('')[0] ){plusses++;}
-                      if(ls[i].split('')[1] == opponentnumber.split('')[1] ){plusses++;}
-                      if(ls[i].split('')[2] == opponentnumber.split('')[2] ){plusses++;}
-                      if(ls[i].split('')[3] == opponentnumber.split('')[3] ){plusses++;} 
-                      //////////////////////////////////////////////////////////////////////////
-                      for (var k = 0; k < ls[i].split('').length; k++) {
-                        for (var j = 0; j < opponentnumber.split('').length; j++) {
-                          if(k != j){
-                             if(ls[i].split('')[k] == opponentnumber.split('')[j] ){minuses++;}
-                          }
+              for (var i = 0; i < ls.length; i++) {
+                if(ls[i] != ''){
+                    if(ls[i].split('')[0] == opponentnumber.split('')[0] ){plusses++;}
+                    if(ls[i].split('')[1] == opponentnumber.split('')[1] ){plusses++;}
+                    if(ls[i].split('')[2] == opponentnumber.split('')[2] ){plusses++;}
+                    if(ls[i].split('')[3] == opponentnumber.split('')[3] ){plusses++;} 
+                    //////////////////////////////////////////////////////////////////////////
+                    for (var k = 0; k < ls[i].split('').length; k++) {
+                      for (var j = 0; j < opponentnumber.split('').length; j++) {
+                        if(k != j){
+                           if(ls[i].split('')[k] == opponentnumber.split('')[j] ){minuses++;}
                         }
                       }
-                      listwidget[i*5] = Center(child: Container(color: const Color.fromARGB(84, 33, 149, 243),width: 100,height: 30,child: Center(child: Text(ls[i].toString(),style: const TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color:Color.fromARGB(255, 0, 0, 0))))));
-                      listwidget[(i*5)+2] = Center(child: Text(plusses != 0 ? '+ $plusses' : '0',style: const TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color:Color.fromARGB(255, 0, 0, 0))));
-                      listwidget[(i*5)+4] = Center(child: Text(minuses != 0 ? '- $minuses' : '0',style: const TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color:Color.fromARGB(255, 0, 0, 0))));
-                      
-                    plusses = 0;
-                    minuses = 0;
-                  }
-                 
+                    }
+                    listwidget[i*5] = Center(child: Container(color: const Color.fromARGB(84, 33, 149, 243),width: 100,height: 30,child: Center(child: Text(ls[i].toString(),style: const TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color:Color.fromARGB(255, 0, 0, 0))))));
+                    listwidget[(i*5)+2] = Center(child: Text(plusses != 0 ? '+ $plusses' : '0',style: const TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color:Color.fromARGB(255, 0, 0, 0))));
+                    listwidget[(i*5)+4] = Center(child: Text(minuses != 0 ? '- $minuses' : '0',style: const TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color:Color.fromARGB(255, 0, 0, 0))));
+                    
+                  plusses = 0;
+                  minuses = 0;
                 }
-             }else{
-
-             }
-        }else{
+               
+              }
+                   }else{
             listwidget =  List<Widget>.generate(100,(counter) => Container(margin: EdgeInsets.zero,child: const Text('')));
         }
       }
@@ -303,10 +312,10 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
     int plusses = 0;
     int minuses = 0;
     for (var doc in snapshot.data!.docs) {
-      // if(!snapshot.data!.docs.any((doc) => doc.id == widget.gameid)){
+      // if(!snapshot.data!.docs.any((doc) => doc.id == gameid)){
       //         Navigator.push(context,MaterialPageRoute(builder: (context) =>MyHomePage(name: widget.name) ));
       //}
-      if(doc.id == widget.gameid){
+      if(doc.id == gameid){
        
         if(doc.data()['player2guessnumbers'] != null){
              List<String> ls = List<String>.from(doc.data()['player2guessnumbers']);
@@ -314,37 +323,33 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
             //  if(opponentnumber == null){
             //    Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) =>MyHomePage(name: widget.name) ));
             //  }
-             if(ls != null){
-                for (var i = 0; i < ls.length; i++) {
-                  if(ls[i] != ''){
-                      if(ls[i].split('')[0] == opponentnumber.split('')[0] ){plusses++;}
-                      if(ls[i].split('')[1] == opponentnumber.split('')[1] ){plusses++;}
-                      if(ls[i].split('')[2] == opponentnumber.split('')[2] ){plusses++;}
-                      if(ls[i].split('')[3] == opponentnumber.split('')[3] ){plusses++;} 
-                      //////////////////////////////////////////////////////////////////////////
-                    
-                      for (var k = 0; k < ls[i].split('').length; k++) {
-                        for (var j = 0; j < opponentnumber.split('').length; j++) {
-                          if(k != j){
-                             if(ls[i].split('')[k] == opponentnumber.split('')[j] ){minuses++;}
-                          }
+              for (var i = 0; i < ls.length; i++) {
+                if(ls[i] != ''){
+                    if(ls[i].split('')[0] == opponentnumber.split('')[0] ){plusses++;}
+                    if(ls[i].split('')[1] == opponentnumber.split('')[1] ){plusses++;}
+                    if(ls[i].split('')[2] == opponentnumber.split('')[2] ){plusses++;}
+                    if(ls[i].split('')[3] == opponentnumber.split('')[3] ){plusses++;} 
+                    //////////////////////////////////////////////////////////////////////////
+                  
+                    for (var k = 0; k < ls[i].split('').length; k++) {
+                      for (var j = 0; j < opponentnumber.split('').length; j++) {
+                        if(k != j){
+                           if(ls[i].split('')[k] == opponentnumber.split('')[j] ){minuses++;}
                         }
                       }
-                      listwidget[i*5] = Center(child: Container(color: const Color.fromARGB(84, 33, 149, 243),width: 100,height: 30,child: Center(child: Text(ls[i].toString(),style: const TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color:Color.fromARGB(255, 0, 0, 0))))));
-                      listwidget[(i*5)+2] = Center(child: Text(plusses != 0 ? '+ $plusses' : '0',style: const TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color:Color.fromARGB(255, 0, 0, 0))));
-                      listwidget[(i*5)+4] = Center(child: Text(minuses != 0 ? '- $minuses' : '0',style: const TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color:Color.fromARGB(255, 0, 0, 0))));
-                      
-                                      
-                   plusses = 0;
-                   minuses = 0;
-                   
-                  }
-                  
+                    }
+                    listwidget[i*5] = Center(child: Container(color: const Color.fromARGB(84, 33, 149, 243),width: 100,height: 30,child: Center(child: Text(ls[i].toString(),style: const TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color:Color.fromARGB(255, 0, 0, 0))))));
+                    listwidget[(i*5)+2] = Center(child: Text(plusses != 0 ? '+ $plusses' : '0',style: const TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color:Color.fromARGB(255, 0, 0, 0))));
+                    listwidget[(i*5)+4] = Center(child: Text(minuses != 0 ? '- $minuses' : '0',style: const TextStyle(fontSize: 16,fontWeight: FontWeight.bold,color:Color.fromARGB(255, 0, 0, 0))));
+                    
+                                    
+                 plusses = 0;
+                 minuses = 0;
+                 
                 }
-             }else{
-
-             }
-        }else{
+                
+              }
+                   }else{
             listwidget =  List<Widget>.generate(100,(counter) => const Text(''));
         }
       }
@@ -432,9 +437,9 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                          });
                                          print(theguess);
                                         widget.me == 'player1' ? 
-                                            rooms.doc(widget.gameid).update({'player1number' : int.parse(number)}) 
+                                            rooms.doc(gameid).update({'player1number' : int.parse(number)}) 
                                             : 
-                                            rooms.doc(widget.gameid).update({'player2number' : int.parse(number)});
+                                            rooms.doc(gameid).update({'player2number' : int.parse(number)});
                                         Navigator.of(context).pop();
                                   }
                                   else{
@@ -488,25 +493,25 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                   Center(child: CircularProgressIndicator(color: Colors.green,strokeWidth: 10,)),
                 ],
                       ));
-            }
+        }
         rooms.get().then((value) { 
-          if(value.docs.every((element) => element.id != widget.gameid)){
-              Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) => MenuPage(name: widget.name,)), );
+          if(value.docs.every((element) => element.id != gameid)){
+              Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) => const MenuPage()), );
         }
         });
         
-        rooms.doc(widget.gameid).get().then((v) => p1 =  v.data()!['player1']);
-        rooms.doc(widget.gameid).get().then((v) => p2 =  v.data()!['player2']);
+        rooms.doc(gameid).get().then((v) => p1 =  v.data()!['player1']);
+        rooms.doc(gameid).get().then((v) => p2 =  v.data()!['player2']);
         String player1number = '';
         String player2number = '';
         
           for (var doc in snapshot.data!.docs) {
-                                   if(doc.id == widget.gameid){
+                                   if(doc.id == gameid){
                                        player1number =  doc.data()['player1number'].toString();
                                    } 
           }
            for (var doc in snapshot.data!.docs) {
-                                   if(doc.id == widget.gameid){
+                                   if(doc.id == gameid){
                                        player2number =  doc.data()['player2number'].toString();
                                    } 
           }
@@ -540,7 +545,7 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                ),
               child: Column(
                 children: [
-                  Center(child: Text(widget.gameid,style: const TextStyle(color: Colors.red),)),
+                  Center(child: Text(gameid,style: const TextStyle(color: Colors.red),)),
                   
                   numberEntered ? 
                   
@@ -549,11 +554,11 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                      builder: (context, snapshot) {
                        if(!snapshot.hasData) return const CircularProgressIndicator(strokeWidth: 10,color: Colors.green,);
                         
-                        if (snapshot.data!.docs.any((element) => element.id == widget.gameid && element.data()['gamefinished'] == true)) {
+                        if (snapshot.data!.docs.any((element) => element.id == gameid && element.data()['gamefinished'] == true)) {
                           String whowon = '';
                           String guessnum = '';
                           for (var doc in snapshot.data!.docs) {   
-                              if (doc.id == widget.gameid ) {
+                              if (doc.id == gameid ) {
                                  whowon = doc.data()['whowon'].toString();
                                  if(whowon == doc.data()['player1']){
                                     guessnum = doc.data()['player1number'].toString();
@@ -707,7 +712,7 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                                 ),
                                          onPressed:  _start == 0 && 
                                             snapshot.data!.docs.any((doc)=>
-                                                 doc.id == widget.gameid  && doc.data()['player1number'] != null && doc.data()['player2number'] != null ?  true :  false)
+                                                 doc.id == gameid  && doc.data()['player1number'] != null && doc.data()['player2number'] != null ?  true :  false)
                                            ?  
                                           () async{
                                            if(isInteger(theguess)){
@@ -726,7 +731,7 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                                               if(widget.me == 'player1'){
                                                                   for (var doc in snapshot.data!.docs) {
                                                                     
-                                                                    if (doc.id == widget.gameid ) {
+                                                                    if (doc.id == gameid ) {
                                                                       String p2n = doc.data()['player2number'].toString();
                                                                        String p1name = doc.data()['player1'].toString();
                                                                        
@@ -737,8 +742,8 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                                                           player2won = false;
                                                                           gamefinished = true;
                                                                         });
-                                                                        await rooms.doc(widget.gameid).update({'gamefinished':true});
-                                                                        await rooms.doc(widget.gameid).update({'whowon':p1name});
+                                                                        await rooms.doc(gameid).update({'gamefinished':true});
+                                                                        await rooms.doc(gameid).update({'whowon':p1name});
                                                                        // showDialog(
                                                                        //   context: context,
                                                                        //    builder: (BuildContext context) {
@@ -766,7 +771,7 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                                                   //     player2won = true;
                                                                   //     gamefinished = true;
                                                                   //   });
-                                                                  //   await rooms.doc(widget.gameid).update({'gamefinished':true});
+                                                                  //   await rooms.doc(gameid).update({'gamefinished':true});
                                                                   //   showDialog(
                                                                   //     context: context,
                                                                   //      builder: (BuildContext context) {
@@ -791,14 +796,14 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                                                         print('a');
                                                                         List<String> list1 = [];
                                                                         list1.add(guessnumber);
-                                                                        rooms.doc(widget.gameid).update({'player1guessnumbers': list1});
+                                                                        rooms.doc(gameid).update({'player1guessnumbers': list1});
                                                                       }
                                                                       else{
                                                                         print('b');
                                                                         List<String> list1 = List<String>.from(doc.data()['player1guessnumbers']);
                                                                         list1.removeWhere((e) => e == '');
                                                                         list1.add(guessnumber);
-                                                                        rooms.doc(widget.gameid).update({'player1guessnumbers': list1});
+                                                                        rooms.doc(gameid).update({'player1guessnumbers': list1});
                                                                       }
                                                                     }
                                                                   }
@@ -806,7 +811,7 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                                                
                                                                  for (var doc in snapshot.data!.docs) { 
                                                                    
-                                                                    if (doc.id == widget.gameid ) {
+                                                                    if (doc.id == gameid ) {
                                                                        String p1n = doc.data()['player1number'].toString();
                                                                         String p2name = doc.data()['player2'].toString();
                                                                     if(theguess == p1n){ 
@@ -816,8 +821,8 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                                                                player1won = false;
                                                                                gamefinished = true;
                                                                              });
-                                                                        await rooms.doc(widget.gameid).update({'gamefinished':true});
-                                                                        await rooms.doc(widget.gameid).update({'whowon':p2name});
+                                                                        await rooms.doc(gameid).update({'gamefinished':true});
+                                                                        await rooms.doc(gameid).update({'whowon':p2name});
                                                                        // showDialog(
                                                                        //   context: context,
                                                                        //    builder: (BuildContext context) {
@@ -833,7 +838,7 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                                                  //      player2won = false;
                                                                  //      gamefinished = true;
                                                                  //    });
-                                                                 //    await rooms.doc(widget.gameid).update({'gamefinished':true});
+                                                                 //    await rooms.doc(gameid).update({'gamefinished':true});
                                                                  //    showDialog(
                                                                  //      context: context,
                                                                  //       builder: (BuildContext context) {
@@ -858,14 +863,14 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                                                         print('a');
                                                                         List<String> list2 = [];
                                                                         list2.add(guessnumber);
-                                                                        rooms.doc(widget.gameid).update({'player2guessnumbers': list2});
+                                                                        rooms.doc(gameid).update({'player2guessnumbers': list2});
                                                                       }
                                                                       else{
                                                                         print('b');
                                                                         List<String> list2 = List<String>.from(doc.data()['player2guessnumbers']);
                                                                         list2.removeWhere((e) => e == '');
                                                                         list2.add(guessnumber);
-                                                                        rooms.doc(widget.gameid).update({'player2guessnumbers': list2});
+                                                                        rooms.doc(gameid).update({'player2guessnumbers': list2});
                                                                       }
                                                                     }
                                                                  }
@@ -949,13 +954,13 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                              
                                              String pnum = '';
                                              widget.me == 'player1' ? snapshot.data!.docs.forEach((doc) {  
-                                               if(widget.gameid == doc.id){
+                                               if(gameid == doc.id){
                                                    
                                                    pnum = doc.data()['player1number'].toString();
                                                 }
                                                 }) 
                                                 : snapshot.data!.docs.forEach((doc) {
-                                                  if(widget.gameid == doc.id){
+                                                  if(gameid == doc.id){
                                                     pnum = doc.data()['player2number'].toString();
                                                   }
                                                   });
@@ -967,8 +972,8 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                                                                    ];
                                             
                                              pnum = ((int.parse(result[0])*1000)+(int.parse(result[1])*100)+(int.parse(result[2])*10)+int.parse(result[3])).toString();
-                                             widget.me == 'player1' ? rooms.doc(widget.gameid).update({'player1number' : int.parse(pnum)})
-                                                                    : rooms.doc(widget.gameid).update({'player2number' : int.parse(pnum)});
+                                             widget.me == 'player1' ? rooms.doc(gameid).update({'player1number' : int.parse(pnum)})
+                                                                    : rooms.doc(gameid).update({'player2number' : int.parse(pnum)});
                                              setState(() {
                                                shuffled = true;
                                                thenumber = pnum;
@@ -1081,7 +1086,7 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                    )
                   : //IF GAME STARTS WITH 2 PLAYERS
                   (
-                  snapshot.data!.docs.any((doc)=>doc.id == widget.gameid && doc.data()['player2'] != '')  ? 
+                  snapshot.data!.docs.any((doc)=>doc.id == gameid && doc.data()['player2'] != '')  ? 
                     
                   Container(
                     height: height,
@@ -1154,7 +1159,7 @@ bool isInteger(dynamic value) => int.tryParse(value.toString()) != null;
                              )
                             ),
                            onPressed: ()async{
-                             await Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) => MenuPage(name : widget.name)), );
+                             await Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) => const MenuPage()), );
                             },
                            child:Padding(
                              padding: const EdgeInsets.all(15.0),

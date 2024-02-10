@@ -93,7 +93,7 @@ class _JoinGamePageState extends State<JoinGamePage> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       ElevatedButton(onPressed: ()async{
-                           Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) =>MenuPage(name: widget.name,) ));
+                           Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) =>const MenuPage() ));
                        },
                        style: ButtonStyle(
                        shadowColor: MaterialStateProperty.all<Color>(Colors.white38),
@@ -115,7 +115,7 @@ class _JoinGamePageState extends State<JoinGamePage> {
                            notjoiningerror = '';
                            });
                            await rooms.doc(joinid).update({'player2':widget.name});
-                           Navigator.push(context,MaterialPageRoute(builder: (context) =>Game(gameid: joinid,me:'player2', name: widget.name,) ));}
+                           Navigator.push(context,MaterialPageRoute(builder: (context) =>Game(me:'player2') ));}
                          else{setState(() {
                            notjoiningerror = 'Check the id';
                          });}
